@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OG Bros</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #1a1f29;
+      --accent: #4ef08d;
+      --text: #e8ecf1;
+      --muted: #8f9cad;
+      --warn: #ffcf4a;
+      --danger: #ff6d6d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(circle at top, #1b2130, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1, h2, h3 { margin: 0 0 10px; }
+    .subtitle { color: var(--muted); margin-bottom: 20px; }
+    .card {
+      background: rgba(26, 31, 41, 0.9);
+      border: 1px solid #2d3647;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+    }
+    .stat { font-size: 1.05rem; }
+    .stat strong { color: var(--accent); }
+    button {
+      background: #26334a;
+      border: 1px solid #3d4b64;
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 6px 6px 0 0;
+    }
+    button:hover { filter: brightness(1.08); }
+    button.primary {
+      background: #1f6b43;
+      border-color: #2e8a58;
+    }
+    button.warn {
+      background: #7c5c12;
+      border-color: #b48621;
+    }
+    .hidden { display: none; }
+    .log {
+      max-height: 260px;
+      overflow: auto;
+      background: #0f131c;
+      border: 1px solid #2a3140;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.93rem;
+      line-height: 1.35;
+    }
+    .log p { margin: 0 0 8px; color: #d7deea; }
+    .good { color: var(--accent); }
+    .bad { color: var(--danger); }
+    .muted { color: var(--muted); }
+    .login-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #2b3344;
+      color: #c5d2e6;
+      margin-left: 6px;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>OG Bros</h1>
+    <p class="subtitle">30-day street empire strategy game. Build influence, manage risky inventory, and stack cash before day 30 ends.</p>
+
+    <section id="login" class="card">
+      <h2>Login</h2>
+      <p class="subtitle">Choose your profile to start:</p>
+      <div class="login-row">
+        <button class="primary" data-user="zaza">Login as Zaza</button>
+        <button class="primary" data-user="harvey">Login as Harvey <span class="badge">$10,000,000 start</span></button>
+        <button class="primary" data-user="guest">Login as Guest</button>
+      </div>
+    </section>
+
+    <section id="game" class="hidden">
+      <div class="grid">
+        <div class="card stat">Player: <strong id="playerName"></strong></div>
+        <div class="card stat">Day: <strong id="day"></strong> / 30</div>
+        <div class="card stat">Cash: <strong id="cash"></strong></div>
+        <div class="card stat">Influence: <strong id="influence"></strong></div>
+        <div class="card stat">Stash: <strong id="stash"></strong></div>
+        <div class="card stat">Crew: <strong id="crew"></strong></div>
+      </div>
+
+      <div class="card">
+        <h3>Actions (each action advances 1 day)</h3>
+        <button onclick="buySupplies()">Buy Supplies ($500)</button>
+        <button onclick="growProduct()" class="warn">Grow Product</button>
+        <button onclick="sellStash()" class="primary">Sell Stash</button>
+        <button onclick="recruitCrew()">Recruit Crew ($2,000)</button>
+        <button onclick="streetEvent()">Street Move</button>
+      </div>
+
+      <div class="card">
+        <h3>Street Feed</h3>
+        <div id="log" class="log"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      player: '',
+      day: 1,
+      cash: 0,
+      influence: 1,
+      stash: 0,
+      crew: 1,
+      active: false,
+    };
+
+    const startingProfiles = {
+      zaza: { cash: 7000, influence: 3, stash: 4, crew: 2 },
+      harvey: { cash: 10000000, influence: 6, stash: 8, crew: 4 },
+      guest: { cash: 2500, influence: 1, stash: 1, crew: 1 },
+    };
+
+    const loginSection = document.getElementById('login');
+    const gameSection = document.getElementById('game');
+    const logEl = document.getElementById('log');
+
+    document.querySelectorAll('[data-user]').forEach((btn) => {
+      btn.addEventListener('click', () => startGame(btn.dataset.user));
+    });
+
+    function startGame(user) {
+      const profile = startingProfiles[user];
+      Object.assign(state, {
+        player: user,
+        day: 1,
+        cash: profile.cash,
+        influence: profile.influence,
+        stash: profile.stash,
+        crew: profile.crew,
+        active: true,
+      });
+
+      loginSection.classList.add('hidden');
+      gameSection.classList.remove('hidden');
+      logEl.innerHTML = '';
+      addLog(`Welcome ${capitalize(user)}. You have 30 days to grow your empire.`, 'good');
+      if (user === 'harvey') {
+        addLog('Harvey starts with elite backing: $10,000,000 cash.', 'good');
+      }
+      render();
+    }
+
+    function render() {
+      document.getElementById('playerName').textContent = capitalize(state.player);
+      document.getElementById('day').textContent = state.day;
+      document.getElementById('cash').textContent = formatMoney(state.cash);
+      document.getElementById('influence').textContent = state.influence;
+      document.getElementById('stash').textContent = state.stash;
+      document.getElementById('crew').textContent = state.crew;
+    }
+
+    function nextDay() {
+      state.day += 1;
+      if (state.day > 30) endGame();
+      render();
+    }
+
+    function buySupplies() {
+      if (!state.active) return;
+      if (state.cash < 500) {
+        addLog('Not enough cash to buy supplies.', 'bad');
+        return;
+      }
+      state.cash -= 500;
+      state.stash += rand(1, 3) + Math.floor(state.crew / 3);
+      state.influence += 1;
+      addLog('You bought supplies and expanded your stash.', 'good');
+      nextDay();
+    }
+
+    function growProduct() {
+      if (!state.active) return;
+      const growGain = rand(1, 4) + Math.floor(state.influence / 4);
+      const risk = Math.random();
+      if (risk < 0.18) {
+        const lost = Math.min(state.stash, rand(1, 3));
+        state.stash -= lost;
+        addLog(`Heat on the block. Lost ${lost} stash during growth.`, 'bad');
+      } else {
+        state.stash += growGain;
+        addLog(`Grow operation succeeded. +${growGain} stash.`, 'good');
+      }
+      nextDay();
+    }
+
+    function sellStash() {
+      if (!state.active) return;
+      if (state.stash <= 0) {
+        addLog('No stash to sell today.', 'muted');
+        return;
+      }
+      const sold = Math.min(state.stash, rand(2, 6) + state.crew);
+      const price = rand(350, 700);
+      const earnings = sold * price + state.influence * 50;
+      state.stash -= sold;
+      state.cash += earnings;
+      state.influence += 1;
+      addLog(`You sold ${sold} stash for ${formatMoney(earnings)}.`, 'good');
+      nextDay();
+    }
+
+    function recruitCrew() {
+      if (!state.active) return;
+      if (state.cash < 2000) {
+        addLog('Need $2,000 to recruit more crew.', 'bad');
+        return;
+      }
+      state.cash -= 2000;
+      state.crew += 1;
+      state.influence += 2;
+      addLog('New crew member joined your operation.', 'good');
+      nextDay();
+    }
+
+    function streetEvent() {
+      if (!state.active) return;
+      const roll = rand(1, 100);
+      if (roll <= 20) {
+        const fine = rand(300, 1500);
+        state.cash = Math.max(0, state.cash - fine);
+        addLog(`Street sweep hit your crew. Lost ${formatMoney(fine)}.`, 'bad');
+      } else if (roll <= 55) {
+        const bonus = rand(500, 2200);
+        state.cash += bonus;
+        addLog(`Side hustle payout: +${formatMoney(bonus)}.`, 'good');
+      } else {
+        state.influence += rand(1, 2);
+        addLog('You made peace with rivals. Influence increased.', 'good');
+      }
+      nextDay();
+    }
+
+    function endGame() {
+      state.active = false;
+      const score = Math.floor(state.cash / 1000) + state.influence * 20 + state.crew * 30;
+      addLog(`Day 30 complete. Final score: ${score}.`, 'good');
+      addLog('Refresh the page to play again with another login.', 'muted');
+      document.querySelectorAll('#game button').forEach((btn) => btn.disabled = true);
+    }
+
+    function addLog(msg, cls = '') {
+      const p = document.createElement('p');
+      p.className = cls;
+      p.textContent = `[Day ${state.day}] ${msg}`;
+      logEl.prepend(p);
+    }
+
+    function rand(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function formatMoney(n) {
+      return `$${n.toLocaleString()}`;
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+  </script>
+</body>
+</html>
